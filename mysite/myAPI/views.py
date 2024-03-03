@@ -1,5 +1,5 @@
 from rest_framework import generics
-from django.db.models import Count
+from django.db.models import Count, Prefetch
 from .models import Product, Lesson, Student
 from rest_framework.views import APIView
 from .serializers import LessonsSerializer, ProductListSerializer, StudentsSerializer
@@ -11,7 +11,15 @@ class AvailableLessonsList(generics.ListAPIView):
     serializer_class = LessonsSerializer
 
     def get_queryset(self):
-        return Lesson.objects.prefetch_related("product").filter(product__id=self.kwargs['pk'])
+        return (Lesson.objects.prefetch_related(
+            Prefetch('product', queryset=Product.objects.prefetch_related('students')))
+                .filter(product__id=self.kwargs['product_id'])
+                &
+                Lesson.objects.prefetch_related(
+                    Prefetch('product', queryset=Product.objects.prefetch_related('students')))
+                .filter(product__students__id=self.kwargs['student_id']))
+
+
 
 
 class ProductList(generics.ListAPIView):
